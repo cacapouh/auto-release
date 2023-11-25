@@ -1,0 +1,73 @@
+name: Create Release on PR Merge
+
+on:
+  workflow_call:
+    inputs:
+      base_branch:
+        description: 'Base branch to listen for PR merges'
+        required: true
+        type: string
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Stock workflow if PR was not merged
+        if: github.event.pull_request.merged == false
+        run: exit 0;
+      
+      - name: Find new release tag from PR title
+        if: ${{ github.event.pull_request.title }}
+        run: |
+          echo "The PR title is '${{ github.event.pull_request.title }}'"
+          maybeNewReleaseTag=$(echo '${{ github.event.pull_request.title }}' | grep -oP '\b\d+\.\d+\.\d+\b' | head -n 1)
+          if [ "$maybeNewReleaseTag" ]; then
+            echo "NEW_TAG=$maybeNewReleaseTag" >> $GITHUB_ENV
+          fi
+
+      - name: Get latest tag
+        if: env.NEW_TAG == ''
+        run: |
+          git fetch --tags
+          latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "Latest tag is $latestTag"
+          echo "LATEST_TAG=$latestTag" >> $GITHUB_ENV
+
+      - name: Increment tag version
+        if: env.NEW_TAG == ''
+        run: |
+          IFS='.' read -ra ADDR <<< "$LATEST_TAG" # バージョンを '.' で分割
+          revision=$((${ADDR[2]} + 1)) # リビジョンをインクリメントする
+          newTag="${ADDR[0]}.${ADDR[1]}.$revision"
+          echo "New tag will be $newTag"
+          echo "NEW_TAG=$newTag" >> $GITHUB_ENV
+
+      - name: Create new tag
+        run: |
+          newTag=${NEW_TAG}
+          git tag $newTag
+          git push origin $newTag
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          newTag=${NEW_TAG}
+          # Use -e with echo to interpret escaped characters like \n and use double backslash \\n for JSON
+          releaseBody=$(echo -e "The release was created at the following commit:\\n\`\`\`\\n$(git log -1)\\n\`\`\`")
+          payload=$(echo '{}' | jq --arg tn "$newTag" --arg body "$releaseBody" '.tag_name=$tn | .name=$tn | .body=$body')
+          curl \
+            -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases"
