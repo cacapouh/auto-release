@@ -1,0 +1,12 @@
+name: Main Workflow for PR Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  call-release-workflow:
+    uses: ./.github/workflows/auto-release.yml
+    with:
+      base_branch: 'main'
