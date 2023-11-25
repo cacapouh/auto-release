@@ -26,7 +26,7 @@ jobs:
         run: exit 0;
       
       - name: Find new release tag from PR title
-        if: ${{ github.event.pull_request.title }}
+        if: ${{ github.event.pull_request.title }} # titleが設定されないことはないのでこのチェックは不要かも
         run: |
           maybeNewReleaseTag=$(echo '${{ github.event.pull_request.title }}' | grep -oP '\b\d+\.\d+\.\d+\b' | head -n 1)
           if [ "$maybeNewReleaseTag" ]; then
@@ -62,9 +62,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           newTag=${NEW_TAG}
+          if [ '${{ github.event.pull_request.title }}' ]; then # titleが設定されないことはないのでこのチェックは不要かも
+            releaseTitle = '${{ github.event.pull_request.title }}'
+          else
+            releaseTitle= "$newTag"
+          fi
           # Use -e with echo to interpret escaped characters like \n and use double backslash \\n for JSON
           releaseBody=$(echo -e "The release was created at the following commit:\\n\`\`\`\\n$(git log -1)\\n\`\`\`")
-          payload=$(echo '{}' | jq --arg tn "$newTag" --arg body "$releaseBody" '.tag_name=$tn | .name=$tn | .body=$body')
+          payload=$(echo '{}' | jq --arg title "$releaseTitle" --arg tn "$newTag" --arg body "$releaseBody" '.tag_name=$tn | .name=$title | .body=$body')
           curl \
             -X POST \
             -H "Authorization: token $GITHUB_TOKEN" \
