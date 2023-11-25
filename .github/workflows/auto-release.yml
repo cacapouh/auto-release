@@ -63,9 +63,9 @@ jobs:
         run: |
           newTag=${NEW_TAG}
           if [ '${{ github.event.pull_request.title }}' ]; then # titleが設定されないことはないのでこのチェックは不要かも
-            releaseTitle = '${{ github.event.pull_request.title }}'
+            releaseTitle='${{ github.event.pull_request.title }}'
           else
-            releaseTitle= "$newTag"
+            releaseTitle="$newTag"
           fi
           # Use -e with echo to interpret escaped characters like \n and use double backslash \\n for JSON
           releaseBody=$(echo -e "The release was created at the following commit:\\n\`\`\`\\n$(git log -1)\\n\`\`\`")
