@@ -31,7 +31,7 @@ jobs:
           maybeNewReleaseTag=$(echo '${{ github.event.pull_request.title }}' | grep -oP '\b\d+\.\d+\.\d+\b' | head -n 1)
           if [ "$maybeNewReleaseTag" ]; then
             echo "NEW_TAG=$maybeNewReleaseTag" >> $GITHUB_ENV
-            echo "NEW_TAG is $maybeNewReleaseTag""
+            echo "NEW_TAG is $maybeNewReleaseTag"
           fi
 
       - name: Get latest tag
