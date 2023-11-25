@@ -21,7 +21,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Stock workflow if PR was not merged
+      - name: Stop workflow if PR was not merged
         if: github.event.pull_request.merged == false
         run: exit 0;
       
